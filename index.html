@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marco Pull Simulator</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#120a24; --panel:#1d1238; --panel2:#27184a; --line:#3b2a68;
+  --text:#f3eeff; --muted:#a99cc9;
+  --rare:#4aa8ff; --epic:#b06bff; --legendary:#ffb62e; --mythic:#ff5fd2; --secret:#ff4d6d;
+  --green:#3ddc5a; --pink:#ff5fd2;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#3a1d6e 0%,var(--bg) 60%) fixed,var(--bg);
+  color:var(--text);font-family:Fredoka,system-ui,"Segoe UI",sans-serif;min-height:100vh}
+.wrap{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-size:clamp(24px,4vw,34px);margin:0;font-weight:700;letter-spacing:.3px}
+h1 span{background:linear-gradient(90deg,#ff2a2a,#ff8a2b,#ff3b6b);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);margin:4px 0 18px;font-size:14px}
+h2{font-size:15px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin:0 0 10px;font-weight:600}
+.panel{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:16px}
+.grid{display:grid;grid-template-columns:1.25fr 1fr;gap:16px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}}
+
+/* palco do summon */
+.stage{text-align:center;position:relative;overflow:hidden}
+.bar{height:8px;border-radius:99px;margin:-4px -4px 14px;background:linear-gradient(90deg,#ff5fd2,#ffb62e,#3ddc5a,#4aa8ff,#b06bff)}
+.res{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;min-height:196px;align-content:center}
+.res.one{grid-template-columns:minmax(0,150px);justify-content:center}
+.res.empty{display:block;padding-top:70px;color:var(--muted);font-size:20px;font-weight:600}
+.res.empty small{display:block;font-size:13px;font-weight:500}
+.card{aspect-ratio:1;border-radius:12px;border:3px solid var(--c);background:radial-gradient(circle at 50% 30%,color-mix(in srgb,var(--c) 30%,#1a0f33),#150c2b 80%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px;
+  font-weight:700;font-size:12px;line-height:1.1;color:var(--c);box-shadow:0 4px 12px #0006;animation:pop .22s ease-out backwards}
+.card i{font-style:normal;font-size:26px;line-height:1}
+.res.one .card{font-size:16px}.res.one .card i{font-size:48px}
+.card.munit,.card.secret{--c:#fff;border-color:transparent;
+  background:radial-gradient(circle at 50% 30%,#4a1d5e,#150c2b 80%) padding-box,linear-gradient(135deg,#ff5fd2,#ffb62e,#3ddc5a,#4aa8ff,#b06bff) border-box;
+  box-shadow:0 0 16px #ff5fd277}
+.card.secret{--c:#ff6b6b;background:radial-gradient(circle at 50% 35%,#5a1420,#1a0810 75%) padding-box,linear-gradient(135deg,#ff3b3b,#ff8a2b,#ff3b6b) border-box;box-shadow:0 0 22px #ff3b3bcc}
+@keyframes pop{0%{transform:scale(.6);opacity:.3}70%{transform:scale(1.12)}100%{transform:scale(1)}}
+.rainbow{background:linear-gradient(90deg,#ff5fd2,#ffb62e,#3ddc5a,#4aa8ff,#b06bff,#ff5fd2);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:slide 2s linear infinite;text-shadow:none}
+@keyframes slide{to{background-position:-200% 0}}
+.redg{background:linear-gradient(90deg,#ff2a2a,#ff8a2b,#ff3b6b,#b3001b,#ff2a2a);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:slide 2s linear infinite;text-shadow:none;font-weight:700}
+.btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+button.b{font:inherit;font-weight:700;font-size:17px;color:#fff;border:0;border-radius:12px;padding:12px 20px;cursor:pointer;
+  box-shadow:0 4px 0 #0007;text-shadow:0 2px 0 #0006;transition:transform .06s,box-shadow .06s,filter .1s}
+button.b:hover{filter:brightness(1.1)}
+button.b:active{transform:translateY(3px);box-shadow:0 1px 0 #0007}
+button.b:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.b.x1{background:linear-gradient(#6fb9ff,#2f7fe0)}
+.b.x10{background:linear-gradient(#ff7ae0,#e23fb8)}
+.b.auto{background:linear-gradient(#58e374,#27b545)}
+.b.auto.on{background:linear-gradient(#ff7a7a,#d93a3a)}
+.b.inst{background:linear-gradient(90deg,#ff2a2a,#ff8a2b,#ff3b6b)}
+.b.shiny{background:linear-gradient(90deg,#ffe27a,#ff8a2b,#ff2a2a);font-variant-numeric:tabular-nums}
+.b.inst.on,.b.shiny.on{background:linear-gradient(#8f86ad,#5a5275)}
+.card.shiny{box-shadow:0 0 6px #fff,0 0 20px #ffe27a}
+.sh{color:#ffe27a;font-weight:700}
+.b.sm{font-size:13px;padding:8px 12px;background:#3b2a68;font-weight:600}
+.opts{display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:12px;color:var(--muted);font-size:13px}
+.opts label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.seg{display:inline-flex;background:#150c2b;border:2px solid var(--line);border-radius:99px;padding:3px;gap:2px}
+.seg button{font:inherit;font-size:13px;font-weight:600;color:var(--muted);background:none;border:0;border-radius:99px;padding:5px 13px;cursor:pointer;transition:background .15s,color .15s}
+.seg button:hover{color:#fff}
+.seg button.on{background:linear-gradient(90deg,#ff5fd2,#b06bff);color:#fff;box-shadow:0 2px 8px #ff5fd255}
+.sw input{appearance:none;-webkit-appearance:none;flex:none;width:40px;height:22px;border-radius:99px;background:#150c2b;border:2px solid var(--line);position:relative;cursor:pointer;margin:0;transition:background .15s,border-color .15s}
+.sw input::after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--muted);transition:left .15s,background .15s}
+.sw input:checked{background:linear-gradient(90deg,#ff5fd2,#b06bff);border-color:transparent}
+.sw input:checked::after{left:20px;background:#fff}
+.sw input:focus-visible,.seg button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.sw:hover{color:var(--text)}
+input.num{font:inherit;font-weight:600;font-size:13px;color:var(--text);background:#150c2b;border:2px solid var(--line);border-radius:99px;padding:5px 10px;width:84px;text-align:center}
+input.num:focus{outline:2px solid var(--pink);outline-offset:1px}
+*{scrollbar-width:thin;scrollbar-color:#6a4fc0 transparent}
+.hint{font-size:12px;color:var(--muted);margin-top:10px}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.st{background:var(--panel2);border-radius:12px;padding:10px 12px}
+.st b{display:block;font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.st span{font-size:12px;color:var(--muted)}
+.luck{margin-top:10px;background:var(--panel2);border-radius:12px;padding:12px;font-size:14px;line-height:1.45}
+.luck b{color:#ffe27a}
+.verdict{display:block;font-size:20px;font-weight:700;margin-bottom:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:5px 6px;text-align:left;border-bottom:1px solid #ffffff10}
+th{color:var(--muted);font-weight:500;font-size:12px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.subrow td{font-size:13px;color:var(--muted)}
+tr.subrow td:first-child{padding-left:20px}
+.log{max-height:230px;overflow:auto;font-size:13px;display:flex;flex-direction:column;gap:4px}
+.log div{background:var(--panel2);border-radius:8px;padding:5px 9px;display:flex;justify-content:space-between;gap:8px}
+.log em{color:var(--muted);font-style:normal}
+.foot{color:var(--muted);font-size:12px;margin-top:18px;line-height:1.5}
+
+/* ===== comemoração do Marco ===== */
+#fx{position:fixed;inset:0;z-index:50;display:none;overflow:hidden;cursor:pointer}
+#fx.on{display:block}
+#fx .hue{position:absolute;inset:0}
+@keyframes hue{to{filter:hue-rotate(360deg)}}
+#fx .flood{position:absolute;inset:-10%;
+  background:radial-gradient(closest-side at 50% 45%,#ff5a3dcc 0%,#e01b2cb0 35%,#a00d1ea0 65%,#4a0510a0 100%);
+  backdrop-filter:blur(7px) saturate(1.6);-webkit-backdrop-filter:blur(7px) saturate(1.6);
+  opacity:0;animation:flood 4s ease forwards}
+@keyframes flood{0%{opacity:0}8%{opacity:1}80%{opacity:.95}100%{opacity:0}}
+#fx .flash{position:absolute;inset:0;background:#fff;opacity:0;animation:flash .5s ease-out .25s}
+@keyframes flash{0%{opacity:.95}100%{opacity:0}}
+#fx .rays{position:absolute;left:50%;top:45%;width:220vmax;height:220vmax;margin:-110vmax 0 0 -110vmax;
+  background:repeating-conic-gradient(from 0deg,#ffffff38 0 6deg,transparent 6deg 18deg);
+  -webkit-mask:radial-gradient(closest-side,#000 0,#000 18%,transparent 62%);mask:radial-gradient(closest-side,#000 0,#000 18%,transparent 62%);
+  opacity:0;animation:rays 4s linear forwards}
+@keyframes rays{0%{opacity:0;transform:rotate(0) scale(.2)}12%{opacity:1;transform:rotate(20deg) scale(1)}82%{opacity:.9}100%{opacity:0;transform:rotate(150deg) scale(1.1)}}
+#fx .center{position:absolute;left:0;right:0;top:45%;transform:translateY(-50%);text-align:center}
+#fx .crown{display:inline-block;font-size:min(32vmin,200px);line-height:1;
+  filter:drop-shadow(0 0 8px #fffa) drop-shadow(0 0 30px #ff3b3b) drop-shadow(0 0 70px #ff8a2baa);
+  transform:scale(0);animation:crown 4s cubic-bezier(.2,1.5,.4,1) forwards}
+@keyframes crown{0%,10%{transform:scale(0) rotate(-12deg);opacity:0}22%{transform:scale(1.18) rotate(3deg);opacity:1}
+  30%{transform:scale(1) rotate(0)}55%{transform:scale(1.06)}80%{transform:scale(1);opacity:1}100%{transform:scale(.25);opacity:0}}
+#fx .uq{font-size:clamp(40px,11vmin,84px);font-weight:700;margin-top:.1em;letter-spacing:1px;
+  filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 2px #fff) drop-shadow(0 0 14px #fffc) drop-shadow(0 4px 0 #0006);opacity:0;animation:uq 4s ease forwards}
+#fx .uq span{background:linear-gradient(90deg,#ff2a2a,#ffb38a,#ff3b6b,#ff8a2b,#ff2a2a);background-size:200% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:slide 1.2s linear infinite}
+@keyframes uq{0%,18%{opacity:0;transform:translateY(24px) scale(.7)}28%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:scale(.6)}}
+#fx .who{font-size:clamp(15px,3vmin,22px);font-weight:600;color:#fff;opacity:0;animation:uq 4s ease .15s forwards;text-shadow:0 2px 8px #000a}
+#fx .rr{position:absolute;left:0;right:0;top:76%;text-align:center;font-size:clamp(26px,6.5vmin,50px);font-weight:700;color:#4dff5e;
+  -webkit-text-stroke:2px #0b4d16;paint-order:stroke fill;text-shadow:0 4px 0 #0b4d16,0 0 18px #2bff4a88;
+  animation:rr 4s cubic-bezier(.2,1.6,.4,1) forwards}
+@keyframes rr{0%{transform:scale(.2) rotate(-6deg);opacity:0}7%{transform:scale(1.15) rotate(-3deg);opacity:1}12%{transform:scale(1) rotate(-2deg)}
+  55%{opacity:1;transform:scale(1) rotate(-2deg)}70%,100%{opacity:0;transform:scale(1.05) translateY(-10px) rotate(-2deg)}}
+#fx .spark{position:absolute;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px #fff8;opacity:0;
+  animation:spark 1.6s ease-out forwards}
+@keyframes spark{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(.2)}}
+body.shake .wrap{animation:shake .45s linear .25s}
+@keyframes shake{20%{transform:translate(-7px,4px)}40%{transform:translate(6px,-5px)}60%{transform:translate(-5px,-3px)}80%{transform:translate(4px,3px)}}
+@media (prefers-reduced-motion:reduce){body.shake .wrap{animation:none}#fx .rays{animation:none;opacity:.4}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1><span>Marco</span> Pull Simulator</h1>
+    <span class="seg" id="lang" role="group" aria-label="Language"><button data-l="en">EN</button><button data-l="pt">PT</button></span></div>
+  <div class="sub" data-i="sub"></div>
+
+  <div class="grid">
+    <div>
+      <div class="panel stage">
+        <div class="bar"></div>
+        <div class="res empty" id="res"></div>
+        <div class="btns">
+          <button class="b x1" id="btnX1" data-i="btnX1"></button>
+          <button class="b x10" id="btnX10" data-i="btnX10"></button>
+          <button class="b auto" id="btnAuto" data-i="auto"></button>
+          <button class="b inst" id="btnInst" data-i="btnInst"></button>
+          <button class="b shiny" id="btnShiny" data-i="btnShiny"></button>
+        </div>
+        <div class="opts">
+          <span style="display:flex;gap:8px;align-items:center"><span data-i="speedLbl"></span>
+            <span class="seg" id="speed" role="group"><button data-v="400" data-i="slow"></button><button data-v="150" class="on" data-i="normal"></button><button data-v="30" data-i="fast"></button></span></span>
+          <span data-i="costLbl"></span>
+        </div>
+        <div class="opts">
+          <label class="sw"><input type="checkbox" id="sound" checked> <span data-i="sound"></span></label>
+          <label class="sw"><input type="checkbox" id="stopMythic"> <span data-i="stopMythic"></span></label>
+        </div>
+        <div class="hint" data-i="hint"></div>
+        <div class="btns"><button class="b sm" id="btnTest" data-i="btnTest"></button><button class="b sm" id="btnReset" data-i="btnReset"></button></div>
+      </div>
+
+      <div class="panel" style="margin-top:16px">
+        <h2 data-i="hLuck"></h2>
+        <div class="stats">
+          <div class="st"><b id="sTotal">0</b><span data-i="sTotal"></span></div>
+          <div class="st"><b id="sSince">0</b><span data-i="sSince"></span></div>
+          <div class="st"><b id="sSpent">0</b><span data-i="sSpent"></span></div>
+          <div class="st"><b id="sSpentSince">0</b><span data-i="sSpentSince"></span></div>
+          <div class="st"><b id="sMarco">0</b><span data-i="sMarco"></span></div>
+          <div class="st"><b id="sMyth">0</b><span data-i="sMyth"></span></div>
+          <div class="st"><b id="sSinceShiny">0</b><span data-i="sSinceShiny"></span></div>
+          <div class="st"><b id="sShiny">0</b><span data-i="sShiny"></span></div>
+        </div>
+        <div class="luck" id="luck"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <h2 data-i="hOdds"></h2>
+        <table id="tbl"></table>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h2 data-i="hLog"></h2>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" data-i="foot"></div>
+</div>
+
+<div id="fx" aria-hidden="true"></div>
+
+<script>
+// ---------- dados (painel "Summon rates by rarity" do banner de verão) ----------
+const P_SECRET = 1/40000;                       // Marco
+const P_SHINY = 0.01;                           // qualquer boneco (Mythic Unit ou Marco) tem 1% de vir shiny
+const P_SHINY_MARCO = P_SECRET*P_SHINY;         // 1 em 4 milhões por giro
+const FEATURED = ['Water Goddess','Armored Crusader','Fishi'];   // 1/3 cada dentro de Mythic Unit
+const CATS = [
+  {id:'secret', name:'Secret Unit',    p:P_SECRET, odds:{en:'1 in 40,000',pt:'1 em 40.000'}, ico:'🔥'},
+  {id:'munit',  name:'Mythic Unit',    p:0.0025,   odds:'0.25',  ico:'⭐'},
+  {id:'mskin',  name:'Mythic Skin',    p:0.00249,  odds:'0.249', ico:'👕', color:'var(--mythic)'},
+  {id:'lskin',  name:'Legendary Skin', p:0.0199,   odds:'1.99',  ico:'👕', color:'var(--legendary)'},
+  {id:'eskin',  name:'Epic Skin',      p:0.16,     odds:'16',    ico:'👕', color:'var(--epic)'},
+  {id:'rskin',  name:'Rare Skin',      p:0,        odds:'81.5',  ico:'👕', color:'var(--rare)'},
+];
+CATS[5].p = 1 - CATS.slice(0,5).reduce((s,c)=>s+c.p,0);   // o resto (≈81,5%) é Rare Skin
+const CUM=[]; { let a=0; for(const c of CATS){ a+=c.p; CUM.push(a); } }
+const SECRET=0, MUNIT=1;
+const DEFAULT_COST = 150;      // custo fixo: 150 moedas por giro
+const $ = id => document.getElementById(id);
+
+// ---------- idiomas (padrão: inglês) ----------
+const I18N = {
+  en:{
+    sub:'Summer banner summon simulator — Marco (Secret Unit) is 1 in 40,000 per summon.',
+    empty:'No summons yet', emptySub:'summon to start',
+    btnX1:'Summon x1', btnX10:'Summon x10', auto:'Auto x10', stop:'Stop', btnInst:'Until Marco 🔥',
+    speedLbl:'Auto speed', slow:'Slow', normal:'Normal', fast:'Fast', costLbl:'🪙 150 coins per summon', sound:'Sound', stopMythic:'Stop auto on Mythic Unit',
+    hint:'Space = Summon x10 · Auto always stops when Marco drops',
+    btnTest:'Preview Marco animation', btnReset:'Reset everything', resetArm:'Click again to reset',
+    hLuck:'Your luck', hOdds:"Odds and what you've pulled", hLog:'Rare pulls',
+    sTotal:'total summons', sSince:'summons since last Marco', sSpent:'coins spent in total', sSpentSince:'coins spent since last Marco',
+    sMarco:'Marcos obtained', sMyth:'Mythic Units obtained', sSinceShiny:'summons since last Shiny Marco', sShiny:'Shiny Marcos obtained',
+    btnShiny:'Until Shiny Marco ✨', progress:x=>`Stop · ${x}M summons`, shinyUnit:'Shiny Mythic Unit',
+    shOdds:x=>`: 1 in <b>${x}</b> per summon (1 in 40,000 Marco × 1% shiny). Units have a 1% chance to come shiny.`,
+    shLast:(n,c,p)=>`Your last Shiny Marco took <b>${n}</b> summons (<b>${c}</b> coins) — luckier than <b>${p}%</b> of attempts.`,
+    shAvg:(a,c)=>`On average it takes <b>${a}</b> summons, or <b>${c}</b> coins.`,
+    luckAvg:(a,m,c)=>`On average it takes <b>${a}</b> summons to get Marco (half of people get him within <b>${m}</b>). That's <b>${c}</b> coins on average.`,
+    luckLast:(n,c,p)=>`Your last Marco took <b>${n}</b> summons (<b>${c}</b> coins) — luckier than <b>${p}%</b> of attempts.`,
+    luckDry:(n,p)=>`Current dry streak: ${n} summons. <b>${p}%</b> of people would already have Marco by now.`,
+    luckAll:(k,a)=>`Your average so far: <b>${a}</b> summons per Marco over ${k} Marcos.`,
+    v:['Insanely lucky! 🍀','Lucky 😎','About average 🙂','Unlucky 😬','Cursed 💀'],
+    thRar:'Rarity', thOdds:'Odds', thGot:'Pulled', thRate:'Your rate',
+    logN:n=>`summon ${n}`, logTook:n=>`took ${n}`, logEmpty:'Nothing yet. Mythic Units and Marco show up here.',
+    testWho:"test — doesn't count", fxOdds:'Secret Unit · 1 in 40,000', fxIn:n=>`in ${n} summons!`,
+    foot:`Rates from the summer banner's "Summon rates by rarity" panel: Mythic Unit 0.25% (Water Goddess, Armored Crusader or Fishi, one third each), Mythic Skin 0.249%, Legendary Skin 1.99%, Epic Skin 16%, Rare Skin 81.5%, Secret Unit 1 in 40,000. Any unit (Mythic Unit or Marco) has a 1% chance to come shiny. Every summon is rolled independently (x10 is just ten x1 rolls) and no pity is simulated. Each summon costs 150 coins. Fan project, not affiliated with the game's creators; the sound is synthesized.`,
+  },
+  pt:{
+    sub:'Simulador de summons do banner de verão — o Marco (Secret Unit) é 1 em 40.000 por giro.',
+    empty:'Nenhum giro ainda', emptySub:'gire para começar',
+    btnX1:'Summon x1', btnX10:'Summon x10', auto:'Auto x10', stop:'Parar', btnInst:'Até o Marco 🔥',
+    speedLbl:'Velocidade do auto', slow:'Lento', normal:'Normal', fast:'Rápido', costLbl:'🪙 150 moedas por giro', sound:'Som', stopMythic:'Parar o auto em Mythic Unit',
+    hint:'Espaço = Summon x10 · O auto sempre para quando sai o Marco',
+    btnTest:'Ver animação do Marco', btnReset:'Zerar tudo', resetArm:'Clique de novo para zerar',
+    hLuck:'Sua sorte', hOdds:'Chances e o que já saiu', hLog:'Pulls raros',
+    sTotal:'giros no total', sSince:'giros desde o último Marco', sSpent:'moedas gastas no total', sSpentSince:'moedas gastas desde o último Marco',
+    sMarco:'Marcos pegos', sMyth:'Mythic Units pegos', sSinceShiny:'giros desde o último Marco Shiny', sShiny:'Marcos Shiny pegos',
+    btnShiny:'Até o Marco Shiny ✨', progress:x=>`Parar · ${x} mi de giros`, shinyUnit:'Mythic Unit Shiny',
+    shOdds:x=>`: 1 em <b>${x}</b> por giro (Marco 1 em 40.000 × 1% de shiny). Os bonecos têm 1% de chance de vir shiny.`,
+    shLast:(n,c,p)=>`Seu último Marco Shiny saiu em <b>${n}</b> giros (<b>${c}</b> moedas) — mais sortudo que <b>${p}%</b> das tentativas.`,
+    shAvg:(a,c)=>`Em média leva <b>${a}</b> giros, ou <b>${c}</b> moedas.`,
+    luckAvg:(a,m,c)=>`Em média leva <b>${a}</b> giros para sair o Marco (metade das pessoas pega em até <b>${m}</b>). Dá <b>${c}</b> moedas em média.`,
+    luckLast:(n,c,p)=>`Seu último Marco saiu em <b>${n}</b> giros (<b>${c}</b> moedas) — mais sortudo que <b>${p}%</b> das tentativas.`,
+    luckDry:(n,p)=>`Seca atual: ${n} giros. <b>${p}%</b> das pessoas já teriam pego o Marco até aqui.`,
+    luckAll:(k,a)=>`Sua média até agora: <b>${a}</b> giros por Marco em ${k} Marcos.`,
+    v:['Sorte absurda! 🍀','Sortudo 😎','Na média 🙂','Azarado 😬','Amaldiçoado 💀'],
+    thRar:'Raridade', thOdds:'Chance', thGot:'Saiu', thRate:'Sua taxa',
+    logN:n=>`giro ${n}`, logTook:n=>`levou ${n}`, logEmpty:'Nada ainda. Mythic Units e o Marco aparecem aqui.',
+    testWho:'teste — não conta', fxOdds:'Secret Unit · 1 em 40.000', fxIn:n=>`em ${n} giros!`,
+    foot:`Chances do painel "Summon rates by rarity" do banner de verão: Mythic Unit 0,25% (Water Goddess, Armored Crusader ou Fishi, um terço cada), Mythic Skin 0,249%, Legendary Skin 1,99%, Epic Skin 16%, Rare Skin 81,5%, Secret Unit 1 em 40.000. Qualquer boneco (Mythic Unit ou Marco) tem 1% de chance de vir shiny. Cada giro é sorteado de forma independente (x10 são só dez giros x1) e nenhum pity é simulado. Cada giro custa 150 moedas. Projeto de fã, sem ligação com os criadores do jogo; o som é sintetizado.`,
+  },
+};
+let LANG='en'; try{ if(localStorage.getItem('mps-lang')==='pt') LANG='pt'; }catch(e){}
+const tx = (k,...a)=>{ const v=I18N[LANG][k]; return typeof v==='function'?v(...a):v; };
+const fmt = n => n.toLocaleString(LANG==='pt'?'pt-BR':'en-US');
+const dec = (x,d)=>{ const s=x.toFixed(d); return LANG==='pt'?s.replace('.',','):s; };
+const oddsOf = c => typeof c.odds==='string' ? (LANG==='pt'?c.odds.replace('.',','):c.odds)+'%' : c.odds[LANG];
+function applyLang(){
+  document.documentElement.lang = LANG==='pt'?'pt-BR':'en';
+  document.querySelectorAll('[data-i]').forEach(e=>e.innerHTML=tx(e.dataset.i));
+  $('speed').setAttribute('aria-label',tx('speedLbl'));
+  for(const b of $('lang').children) b.classList.toggle('on',b.dataset.l===LANG);
+  if(autoT) $('btnAuto').textContent=tx('stop');
+  render();
+}
+
+// ---------- estado ----------
+const KEY='mps-state-v1';
+const fresh = ()=>({total:0, since:0, sinceShiny:0, counts:[0,0,0,0,0,0], feat:[0,0,0], shinyFeat:[0,0,0], marcos:[], shinyMarcos:[], last:[], log:[], cost:DEFAULT_COST});
+let S = fresh();
+try{ const j=JSON.parse(localStorage.getItem(KEY)); if(j&&Array.isArray(j.counts)&&j.counts.length===6){ S=Object.assign(fresh(),j); if(j.sinceShiny===undefined) S.sinceShiny=S.total; } }catch(e){}
+S.cost=DEFAULT_COST;
+const save = ()=>{ try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){} };
+
+// ---------- sorteio ----------
+// um giro: devolve {c: índice da categoria, f: índice do featured (só Mythic Unit)}
+function rollOne(){
+  const r=Math.random(); let c=0;
+  while(c<5 && r>=CUM[c]) c++;
+  return {c, f:c===MUNIT?Math.floor(Math.random()*3):-1, s:c<=MUNIT&&Math.random()<P_SHINY};
+}
+const pullName = x => (x.s?'Shiny ':'')+(x.c===SECRET?'Marco':x.c===MUNIT?FEATURED[x.f]:CATS[x.c].name);
+function pushLog(e){ S.log.unshift(e); if(S.log.length>60) S.log.length=60; }
+// aplica n giros ao estado; devolve o que aconteceu
+function applyPulls(n){
+  const out=[]; let marco=0, myth=false, shiny=0;
+  for(let i=0;i<n;i++){
+    const x=rollOne(); out.push(x);
+    S.total++; S.since++; S.sinceShiny++; S.counts[x.c]++;
+    if(x.c===MUNIT){ S.feat[x.f]++; if(x.s) S.shinyFeat[x.f]++; myth=true; pushLog({c:MUNIT,f:x.f,s:x.s,n:S.total}); }
+    else if(x.c===SECRET){
+      marco=S.since; S.marcos.push(S.since); pushLog({c:SECRET,s:x.s,n:S.total,took:S.since}); S.since=0;
+      if(x.s){ shiny=S.sinceShiny; S.shinyMarcos.push(shiny); S.sinceShiny=0; }
+    }
+  }
+  S.last=out;
+  return {marco,myth,shiny};
+}
+
+// ---------- render ----------
+function cardHTML(x,i){
+  const c=CATS[x.c], cls=x.c===SECRET?' secret':x.c===MUNIT?' munit':'';
+  return `<div class="card${cls}${x.s?' shiny':''}" style="${c.color?`--c:${c.color};`:''}animation-delay:${i*25}ms"><i>${x.s?'✨':c.ico}</i>${pullName(x)}</div>`;
+}
+function render(pop){
+  const res=$('res');
+  if(S.last.length){
+    res.className='res'+(S.last.length===1?' one':'');
+    if(pop||!res.children.length||res.dataset.sig!==JSON.stringify(S.last)+LANG){ res.innerHTML=S.last.map(cardHTML).join(''); res.dataset.sig=JSON.stringify(S.last)+LANG; }
+  } else { res.className='res empty'; res.innerHTML=`${tx('empty')}<small>${tx('emptySub')}</small>`; res.dataset.sig=''; }
+
+  const cost=S.cost;
+  $('sTotal').textContent=fmt(S.total); $('sSince').textContent=fmt(S.since);
+  $('sSpent').textContent=fmt(S.total*cost); $('sSpentSince').textContent=fmt(S.since*cost);
+  $('sMarco').textContent=fmt(S.marcos.length); $('sMyth').textContent=fmt(S.counts[MUNIT]);
+  $('sSinceShiny').textContent=fmt(S.sinceShiny); $('sShiny').textContent=fmt(S.shinyMarcos.length);
+
+  // sorte
+  const avg=Math.round(1/P_SECRET), med=Math.ceil(Math.log(.5)/Math.log(1-P_SECRET));
+  let h='';
+  if(S.marcos.length){
+    const n=S.marcos[S.marcos.length-1], q=1-(1-P_SECRET)**n;      // q = fração que já teria pego em n giros
+    const v=q<.05?0:q<.3?1:q<.7?2:q<.95?3:4;
+    h+=`<span class="verdict rainbow">${tx('v')[v]}</span>`+tx('luckLast',fmt(n),fmt(n*cost),dec((1-q)*100,1))+'<br>';
+    if(S.marcos.length>1) h+=tx('luckAll',fmt(S.marcos.length),fmt(Math.round(S.marcos.reduce((a,b)=>a+b,0)/S.marcos.length)))+'<br>';
+  }
+  if(S.since>0) h+=tx('luckDry',fmt(S.since),dec((1-(1-P_SECRET)**S.since)*100,1))+'<br>';
+  if(h) h+='<br>';
+  h+=tx('luckAvg',fmt(avg),fmt(med),fmt(avg*cost));
+  const avgS=Math.round(1/P_SHINY_MARCO);
+  h+=`<br><br><span class="sh">✨ Shiny Marco</span>`+tx('shOdds',fmt(avgS))+' '+tx('shAvg',fmt(avgS),fmt(avgS*cost));
+  if(S.shinyMarcos.length){ const n=S.shinyMarcos[S.shinyMarcos.length-1];
+    h+='<br>'+tx('shLast',fmt(n),fmt(n*cost),dec(Math.exp(-P_SHINY_MARCO*n)*100,1)); }
+  $('luck').innerHTML=h;
+
+  // tabela
+  const rate = c => S.total?dec(c/S.total*100,c&&c/S.total<.01?4:2)+'%':'—';
+  const nameHTML = c => c.id==='secret'?`<span class="redg">${c.name}</span>`:c.color?`<span style="color:${c.color};font-weight:600">${c.name}</span>`:`<span class="rainbow" style="font-weight:700">${c.name}</span>`;
+  $('tbl').innerHTML=`<tr><th>${tx('thRar')}</th><th class="n">${tx('thOdds')}</th><th class="n">${tx('thGot')}</th><th class="n">${tx('thRate')}</th></tr>`+
+    CATS.map((c,i)=>{
+      let r=`<tr><td>${c.ico} ${nameHTML(c)}${i===SECRET?' <span style="color:var(--muted)">(Marco)</span>':''}</td><td class="n">${oddsOf(c)}</td><td class="n">${fmt(S.counts[i])}</td><td class="n">${rate(S.counts[i])}</td></tr>`;
+      const sub=(n,o,c)=>`<tr class="subrow"><td><span class="sh">✨ ${n}</span></td><td class="n">${o}</td><td class="n">${fmt(c)}</td><td class="n">${rate(c)}</td></tr>`;
+      if(i===SECRET) r+=sub('Shiny Marco',LANG==='pt'?'1 em 4.000.000':'1 in 4,000,000',S.shinyMarcos.length);
+      if(i===MUNIT) r+=sub(tx('shinyUnit'),(LANG==='pt'?'0,0025':'0.0025')+'%',S.shinyFeat.reduce((a,b)=>a+b,0));
+      if(i===MUNIT) r+=FEATURED.map((f,k)=>`<tr class="subrow"><td>${f}</td><td class="n">${LANG==='pt'?'0,0833':'0.0833'}%</td><td class="n">${fmt(S.feat[k])}</td><td class="n">${rate(S.feat[k])}</td></tr>`).join('');
+      return r;
+    }).join('');
+
+  $('log').innerHTML=S.log.length?S.log.map(l=>l.c===SECRET
+      ?`<div><span>${l.s?'✨':'🔥'} <span class="redg">${l.s?'Shiny ':''}Marco</span> <em>· ${tx('logTook',fmt(l.took))}</em></span><em>${tx('logN',fmt(l.n))}</em></div>`
+      :`<div><span>${l.s?'✨':'⭐'} <b${l.s?' class="sh"':''}>${l.s?'Shiny ':''}${FEATURED[l.f]}</b></span><em>${tx('logN',fmt(l.n))}</em></div>`).join('')
+    :`<div><em>${tx('logEmpty')}</em></div>`;
+}
+
+// ---------- som (sintetizado, nada do jogo) ----------
+let AC;
+function tone(f,t0,d,type='sine',g=.12){
+  if(!$('sound').checked) return;
+  try{
+    AC ??= new (window.AudioContext||window.webkitAudioContext)();
+    const o=AC.createOscillator(), a=AC.createGain(), t=AC.currentTime+t0;
+    o.type=type; o.frequency.value=f; a.gain.setValueAtTime(0,t); a.gain.linearRampToValueAtTime(g,t+.01);
+    a.gain.exponentialRampToValueAtTime(.0001,t+d); o.connect(a).connect(AC.destination); o.start(t); o.stop(t+d+.02);
+  }catch(e){}
+}
+const sfxRoll = ()=>tone(520+Math.random()*80,0,.07,'triangle',.05);
+const sfxMythic = ()=>[660,880,1100].forEach((f,i)=>tone(f,i*.07,.25,'triangle',.1));
+function sfxMarco(){
+  tone(90,.2,.9,'sawtooth',.16); tone(60,.2,1.1,'sine',.25);
+  [523,659,784,1047,1319,1568,2093].forEach((f,i)=>{tone(f,.3+i*.09,.7,'triangle',.11);tone(f*2,.3+i*.09,.5,'sine',.04)});
+  [1047,1319,1568].forEach(f=>tone(f,1.1,1.8,'sine',.09));
+}
+
+// ---------- animação do Marco ----------
+let fxTimer;
+function celebrate(took,test,shiny){
+  const fx=$('fx'); clearTimeout(fxTimer);
+  let sparks='';
+  for(let i=0;i<34;i++){const a=Math.random()*Math.PI*2, d=30+Math.random()*55;
+    sparks+=`<i class="spark" style="left:50%;top:45%;--dx:${Math.cos(a)*d}vmin;--dy:${Math.sin(a)*d}vmin;animation-delay:${.3+Math.random()*.9}s"></i>`;}
+  fx.innerHTML=`<div class="hue"><div class="flood"></div><div class="rays"></div>
+    <div class="center">
+      <div class="crown">${shiny?'✨':'🔥'}</div>
+      <div class="uq"><span>${shiny?'Shiny Marco':'Marco'}</span></div>
+      <div class="who">${shiny?'Shiny '+tx('fxOdds').replace(/40[.,]000/,m=>'4'+m[2]+'000'+m[2]+'000'):tx('fxOdds')}</div>
+    </div>${sparks}</div>
+    <div class="rr">${test?tx('testWho'):tx('fxIn',fmt(took))}</div><div class="flash"></div>`;
+  fx.classList.remove('on'); void fx.offsetWidth; fx.classList.add('on');
+  document.body.classList.remove('shake'); void document.body.offsetWidth; document.body.classList.add('shake');
+  sfxMarco();
+  fxTimer=setTimeout(()=>fx.classList.remove('on'),4000);
+}
+$('fx').onclick=()=>{clearTimeout(fxTimer);$('fx').classList.remove('on')};
+
+// ---------- ações ----------
+let autoT=null, speedMs=150;
+function stopAuto(){ clearInterval(autoT); autoT=null; $('btnAuto').classList.remove('on'); $('btnAuto').textContent=tx('auto'); }
+function doPull(n){
+  const r=applyPulls(n); render(true); save();
+  if(r.marco){ stopAuto(); celebrate(r.shiny||r.marco,false,!!r.shiny); }
+  else if(r.myth){ sfxMythic(); if(autoT&&$('stopMythic').checked) stopAuto(); }
+  else sfxRoll();
+}
+$('btnX1').onclick=()=>{ stopAuto(); doPull(1); };
+$('btnX10').onclick=()=>{ stopAuto(); doPull(10); };
+$('btnAuto').onclick=()=>{
+  if(autoT) return stopAuto();
+  $('btnAuto').classList.add('on'); $('btnAuto').textContent=tx('stop');
+  autoT=setInterval(()=>doPull(10),speedMs);
+};
+$('speed').onclick=e=>{ const b=e.target.closest('button'); if(!b) return;
+  for(const x of $('speed').children) x.classList.toggle('on',x===b);
+  speedMs=+b.dataset.v; if(autoT){ clearInterval(autoT); autoT=setInterval(()=>doPull(10),speedMs); } };
+// gira de uma vez até sair o Marco (em média 40 mil giros; o limite é só uma trava de segurança)
+// o Marco Shiny leva em média 4 milhões de giros, então roda em lotes sem travar a página
+let fastRun=false, fastBtn=null;
+const BUSY=['btnX1','btnX10','btnAuto','btnInst','btnShiny','btnTest','btnReset'];
+function setBusy(on){ for(const id of BUSY) $(id).disabled=on&&id!==fastBtn; }
+function stopFast(){ fastRun=false; if(fastBtn){ $(fastBtn).classList.remove('on'); $(fastBtn).textContent=tx(fastBtn); } fastBtn=null; setBusy(false); render(true); save(); }
+// mode 'marco' = para em qualquer Marco · 'shiny' = só para no Marco Shiny
+function runFast(mode,id){
+  if(fastRun) return stopFast();
+  stopAuto(); fastRun=true; fastBtn=id; setBusy(true); $(id).classList.add('on');
+  let started=0;
+  (function chunk(){
+    if(!fastRun) return;
+    const t0=performance.now(), cnt=S.counts; let hit=0, hitShiny=false, n=0, since=S.since, sinceShiny=S.sinceShiny;
+    while(!hit && performance.now()-t0<40){
+      for(let k=0;k<50000;k++){
+        const r=Math.random(); let c=0;
+        while(c<5 && r>=CUM[c]) c++;
+        n++; since++; sinceShiny++; cnt[c]++;
+        if(c===MUNIT){ const f=Math.floor(Math.random()*3); S.feat[f]++; if(Math.random()<P_SHINY) S.shinyFeat[f]++; }
+        else if(c===SECRET){
+          const s=Math.random()<P_SHINY, took=since;
+          S.marcos.push(took); pushLog({c:SECRET,s,n:S.total+n,took}); since=0;
+          if(s){ S.shinyMarcos.push(sinceShiny); hit=sinceShiny; hitShiny=true; sinceShiny=0; break; }
+          if(mode==='marco'){ hit=took; break; }
+        }
+      }
+    }
+    S.total+=n; S.since=since; S.sinceShiny=sinceShiny; started+=n;
+    if(hit){ S.last=[{c:SECRET,f:-1,s:hitShiny}]; stopFast(); celebrate(hit,false,hitShiny); return; }
+    $(id).textContent=tx('progress',dec(started/1e6,1));
+    $('sTotal').textContent=fmt(S.total); $('sSinceShiny').textContent=fmt(S.sinceShiny); $('sMarco').textContent=fmt(S.marcos.length);
+    $('sSpent').textContent=fmt(S.total*S.cost);
+    setTimeout(chunk,0);
+  })();
+}
+$('btnInst').onclick=()=>runFast('marco','btnInst');
+$('btnShiny').onclick=()=>runFast('shiny','btnShiny');
+$('btnTest').onclick=()=>celebrate(0,true);
+let resetArm=null;
+$('btnReset').onclick=()=>{
+  const b=$('btnReset');
+  if(!resetArm){ b.textContent=tx('resetArm'); b.style.background='#d93a3a';
+    resetArm=setTimeout(()=>{resetArm=null;b.textContent=tx('btnReset');b.style.background=''},3000); return; }
+  clearTimeout(resetArm); resetArm=null; b.textContent=tx('btnReset'); b.style.background='';
+  stopAuto(); const cost=S.cost; S=fresh(); S.cost=cost; save(); render(); };
+addEventListener('keydown',e=>{ if(e.code==='Space'&&!/SELECT|INPUT|BUTTON/.test(e.target.tagName)){ e.preventDefault(); if($('fx').classList.contains('on')) return $('fx').onclick(); if(fastRun) return; stopAuto(); doPull(10); } });
+$('lang').onclick=e=>{ const b=e.target.closest('button'); if(!b||b.dataset.l===LANG) return;
+  if(resetArm){ clearTimeout(resetArm); resetArm=null; $('btnReset').style.background=''; }
+  if(fastRun) stopFast();
+  LANG=b.dataset.l; try{localStorage.setItem('mps-lang',LANG)}catch(e){} applyLang(); };
+applyLang();
+</script>
+</body>
+</html>
