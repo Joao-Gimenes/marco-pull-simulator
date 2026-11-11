@@ -185,6 +185,8 @@ body.shake .wrap{animation:shake .45s linear .25s}
           <div class="st"><b id="sMyth">0</b><span data-i="sMyth"></span></div>
           <div class="st"><b id="sSinceShiny">0</b><span data-i="sSinceShiny"></span></div>
           <div class="st"><b id="sShiny">0</b><span data-i="sShiny"></span></div>
+          <div class="st"><b id="sPity">0</b><span data-i="sPity"></span></div>
+          <div class="st"><b id="sPityHits">0</b><span data-i="sPityHits"></span></div>
         </div>
         <div class="luck" id="luck"></div>
       </div>
@@ -210,7 +212,8 @@ body.shake .wrap{animation:shake .45s linear .25s}
 <script>
 // ---------- dados (painel "Summon rates by rarity" do banner de verão) ----------
 const P_SECRET = 1/40000;                       // Marco
-const P_SHINY = 0.01;                           // qualquer boneco (Mythic Unit ou Marco) tem 1% de vir shiny
+const PITY = 400;                               // 400 giros sem Mythic Unit: o 400º vem garantido
+const P_SHINY = 0.01;                          // qualquer boneco (Mythic Unit ou Marco) tem 1% de vir shiny
 const P_SHINY_MARCO = P_SECRET*P_SHINY;         // 1 em 4 milhões por giro
 const FEATURED = ['Water Goddess','Armored Crusader','Fishi'];   // 1/3 cada dentro de Mythic Unit
 const CATS = [
@@ -239,6 +242,7 @@ const I18N = {
     hLuck:'Your luck', hOdds:"Odds and what you've pulled", hLog:'Rare pulls',
     sTotal:'total summons', sSince:'summons since last Marco', sSpent:'coins spent in total', sSpentSince:'coins spent since last Marco',
     sMarco:'Marcos obtained', sMyth:'Mythic Units obtained', sSinceShiny:'summons since last Shiny Marco', sShiny:'Shiny Marcos obtained',
+    sPity:'Mythic Unit pity (guaranteed at 400)', sPityHits:'Mythic Units from pity',
     btnShiny:'Until Shiny Marco ✨', progress:x=>`Stop · ${x}M summons`, shinyUnit:'Shiny Mythic Unit',
     shOdds:x=>`: 1 in <b>${x}</b> per summon (1 in 40,000 Marco × 1% shiny). Units have a 1% chance to come shiny.`,
     shLast:(n,c,p)=>`Your last Shiny Marco took <b>${n}</b> summons (<b>${c}</b> coins) — luckier than <b>${p}%</b> of attempts.`,
@@ -251,7 +255,7 @@ const I18N = {
     thRar:'Rarity', thOdds:'Odds', thGot:'Pulled', thRate:'Your rate',
     logN:n=>`summon ${n}`, logTook:n=>`took ${n}`, logEmpty:'Nothing yet. Mythic Units and Marco show up here.',
     testWho:"test — doesn't count", fxOdds:'Secret Unit · 1 in 40,000', fxIn:n=>`in ${n} summons!`,
-    foot:`Rates from the summer banner's "Summon rates by rarity" panel: Mythic Unit 0.25% (Water Goddess, Armored Crusader or Fishi, one third each), Mythic Skin 0.249%, Legendary Skin 1.99%, Epic Skin 16%, Rare Skin 81.5%, Secret Unit 1 in 40,000. Any unit (Mythic Unit or Marco) has a 1% chance to come shiny. Every summon is rolled independently (x10 is just ten x1 rolls) and no pity is simulated. Each summon costs 150 coins. Fan project, not affiliated with the game's creators; the sound is synthesized.`,
+    foot:`Rates from the summer banner's "Summon rates by rarity" panel: Mythic Unit 0.25% (Water Goddess, Armored Crusader or Fishi, one third each), Mythic Skin 0.249%, Legendary Skin 1.99%, Epic Skin 16%, Rare Skin 81.5%, Secret Unit 1 in 40,000. Any unit (Mythic Unit or Marco) has a 1% chance to come shiny. Every summon is rolled independently (x10 is just ten x1 rolls). Mythic Unit pity: after 400 summons in a row without a Mythic Unit, the 400th is a guaranteed one (so your Mythic Unit rate ends up above 0.25%); the pity never replaces a Marco. Each summon costs 150 coins. Fan project, not affiliated with the game's creators; the sound is synthesized.`,
   },
   pt:{
     sub:'Simulador de summons do banner de verão — o Marco (Secret Unit) é 1 em 40.000 por giro.',
@@ -263,6 +267,7 @@ const I18N = {
     hLuck:'Sua sorte', hOdds:'Chances e o que já saiu', hLog:'Pulls raros',
     sTotal:'giros no total', sSince:'giros desde o último Marco', sSpent:'moedas gastas no total', sSpentSince:'moedas gastas desde o último Marco',
     sMarco:'Marcos pegos', sMyth:'Mythic Units pegos', sSinceShiny:'giros desde o último Marco Shiny', sShiny:'Marcos Shiny pegos',
+    sPity:'pity de Mythic Unit (garantido no 400)', sPityHits:'Mythic Units vindos do pity',
     btnShiny:'Até o Marco Shiny ✨', progress:x=>`Parar · ${x} mi de giros`, shinyUnit:'Mythic Unit Shiny',
     shOdds:x=>`: 1 em <b>${x}</b> por giro (Marco 1 em 40.000 × 1% de shiny). Os bonecos têm 1% de chance de vir shiny.`,
     shLast:(n,c,p)=>`Seu último Marco Shiny saiu em <b>${n}</b> giros (<b>${c}</b> moedas) — mais sortudo que <b>${p}%</b> das tentativas.`,
@@ -275,7 +280,7 @@ const I18N = {
     thRar:'Raridade', thOdds:'Chance', thGot:'Saiu', thRate:'Sua taxa',
     logN:n=>`giro ${n}`, logTook:n=>`levou ${n}`, logEmpty:'Nada ainda. Mythic Units e o Marco aparecem aqui.',
     testWho:'teste — não conta', fxOdds:'Secret Unit · 1 em 40.000', fxIn:n=>`em ${n} giros!`,
-    foot:`Chances do painel "Summon rates by rarity" do banner de verão: Mythic Unit 0,25% (Water Goddess, Armored Crusader ou Fishi, um terço cada), Mythic Skin 0,249%, Legendary Skin 1,99%, Epic Skin 16%, Rare Skin 81,5%, Secret Unit 1 em 40.000. Qualquer boneco (Mythic Unit ou Marco) tem 1% de chance de vir shiny. Cada giro é sorteado de forma independente (x10 são só dez giros x1) e nenhum pity é simulado. Cada giro custa 150 moedas. Projeto de fã, sem ligação com os criadores do jogo; o som é sintetizado.`,
+    foot:`Chances do painel "Summon rates by rarity" do banner de verão: Mythic Unit 0,25% (Water Goddess, Armored Crusader ou Fishi, um terço cada), Mythic Skin 0,249%, Legendary Skin 1,99%, Epic Skin 16%, Rare Skin 81,5%, Secret Unit 1 em 40.000. Qualquer boneco (Mythic Unit ou Marco) tem 1% de chance de vir shiny. Cada giro é sorteado de forma independente (x10 são só dez giros x1). Pity de Mythic Unit: depois de 400 giros seguidos sem Mythic Unit, o 400º vem garantido (por isso sua taxa de Mythic Unit fica acima de 0,25%); o pity nunca substitui um Marco. Cada giro custa 150 moedas. Projeto de fã, sem ligação com os criadores do jogo; o som é sintetizado.`,
   },
 };
 let LANG='en'; try{ if(localStorage.getItem('mps-lang')==='pt') LANG='pt'; }catch(e){}
@@ -294,7 +299,7 @@ function applyLang(){
 
 // ---------- estado ----------
 const KEY='mps-state-v1';
-const fresh = ()=>({total:0, since:0, sinceShiny:0, counts:[0,0,0,0,0,0], feat:[0,0,0], shinyFeat:[0,0,0], marcos:[], shinyMarcos:[], last:[], log:[], cost:DEFAULT_COST});
+const fresh = ()=>({total:0, since:0, sinceShiny:0, pity:0, pityHits:0, counts:[0,0,0,0,0,0], feat:[0,0,0], shinyFeat:[0,0,0], marcos:[], shinyMarcos:[], last:[], log:[], cost:DEFAULT_COST});
 let S = fresh();
 try{ const j=JSON.parse(localStorage.getItem(KEY)); if(j&&Array.isArray(j.counts)&&j.counts.length===6){ S=Object.assign(fresh(),j); if(j.sinceShiny===undefined) S.sinceShiny=S.total; } }catch(e){}
 S.cost=DEFAULT_COST;
@@ -313,9 +318,13 @@ function pushLog(e){ S.log.unshift(e); if(S.log.length>60) S.log.length=60; }
 function applyPulls(n){
   const out=[]; let marco=0, myth=false, shiny=0;
   for(let i=0;i<n;i++){
-    const x=rollOne(); out.push(x);
+    let x=rollOne();
+    S.pity++;
+    if(x.c===MUNIT) S.pity=0;
+    else if(S.pity>=PITY && x.c!==SECRET){ x={c:MUNIT,f:Math.floor(Math.random()*3),s:Math.random()<P_SHINY,p:true}; S.pity=0; S.pityHits++; }   // pity: a skin vira Mythic Unit
+    out.push(x);
     S.total++; S.since++; S.sinceShiny++; S.counts[x.c]++;
-    if(x.c===MUNIT){ S.feat[x.f]++; if(x.s) S.shinyFeat[x.f]++; myth=true; pushLog({c:MUNIT,f:x.f,s:x.s,n:S.total}); }
+    if(x.c===MUNIT){ S.feat[x.f]++; if(x.s) S.shinyFeat[x.f]++; myth=true; pushLog({c:MUNIT,f:x.f,s:x.s,p:x.p,n:S.total}); }
     else if(x.c===SECRET){
       marco=S.since; S.marcos.push(S.since); pushLog({c:SECRET,s:x.s,n:S.total,took:S.since}); S.since=0;
       if(x.s){ shiny=S.sinceShiny; S.shinyMarcos.push(shiny); S.sinceShiny=0; }
@@ -342,6 +351,7 @@ function render(pop){
   $('sSpent').textContent=fmt(S.total*cost); $('sSpentSince').textContent=fmt(S.since*cost);
   $('sMarco').textContent=fmt(S.marcos.length); $('sMyth').textContent=fmt(S.counts[MUNIT]);
   $('sSinceShiny').textContent=fmt(S.sinceShiny); $('sShiny').textContent=fmt(S.shinyMarcos.length);
+  $('sPity').textContent=S.pity+'/'+PITY; $('sPityHits').textContent=fmt(S.pityHits);
 
   // sorte
   const avg=Math.round(1/P_SECRET), med=Math.ceil(Math.log(.5)/Math.log(1-P_SECRET));
@@ -376,7 +386,7 @@ function render(pop){
 
   $('log').innerHTML=S.log.length?S.log.map(l=>l.c===SECRET
       ?`<div><span>${l.s?'✨':'🔥'} <span class="redg">${l.s?'Shiny ':''}Marco</span> <em>· ${tx('logTook',fmt(l.took))}</em></span><em>${tx('logN',fmt(l.n))}</em></div>`
-      :`<div><span>${l.s?'✨':'⭐'} <b${l.s?' class="sh"':''}>${l.s?'Shiny ':''}${FEATURED[l.f]}</b></span><em>${tx('logN',fmt(l.n))}</em></div>`).join('')
+      :`<div><span>${l.s?'✨':'⭐'} <b${l.s?' class="sh"':''}>${l.s?'Shiny ':''}${FEATURED[l.f]}</b>${l.p?' <em>· pity</em>':''}</span><em>${tx('logN',fmt(l.n))}</em></div>`).join('')
     :`<div><em>${tx('logEmpty')}</em></div>`;
 }
 
@@ -452,12 +462,14 @@ function runFast(mode,id){
   let started=0;
   (function chunk(){
     if(!fastRun) return;
-    const t0=performance.now(), cnt=S.counts; let hit=0, hitShiny=false, n=0, since=S.since, sinceShiny=S.sinceShiny;
+    const t0=performance.now(), cnt=S.counts; let hit=0, hitShiny=false, n=0, since=S.since, sinceShiny=S.sinceShiny, pity=S.pity;
     while(!hit && performance.now()-t0<40){
       for(let k=0;k<50000;k++){
         const r=Math.random(); let c=0;
         while(c<5 && r>=CUM[c]) c++;
-        n++; since++; sinceShiny++; cnt[c]++;
+        n++; since++; sinceShiny++; pity++;
+        if(c===MUNIT) pity=0; else if(pity>=PITY && c!==SECRET){ c=MUNIT; pity=0; S.pityHits++; }
+        cnt[c]++;
         if(c===MUNIT){ const f=Math.floor(Math.random()*3); S.feat[f]++; if(Math.random()<P_SHINY) S.shinyFeat[f]++; }
         else if(c===SECRET){
           const s=Math.random()<P_SHINY, took=since;
@@ -467,7 +479,7 @@ function runFast(mode,id){
         }
       }
     }
-    S.total+=n; S.since=since; S.sinceShiny=sinceShiny; started+=n;
+    S.total+=n; S.since=since; S.sinceShiny=sinceShiny; S.pity=pity; started+=n;
     if(hit){ S.last=[{c:SECRET,f:-1,s:hitShiny}]; stopFast(); celebrate(hit,false,hitShiny); return; }
     $(id).textContent=tx('progress',dec(started/1e6,1));
     $('sTotal').textContent=fmt(S.total); $('sSinceShiny').textContent=fmt(S.sinceShiny); $('sMarco').textContent=fmt(S.marcos.length);
